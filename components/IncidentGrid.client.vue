@@ -202,9 +202,6 @@ const defaultColDef = ref({
   resizable: true,
 });
 
-const paginationPageSize = ref(25);
-const paginationPageSizeSelector = ref([25, 50, 100]);
-
 function onGridReady(params: any) {
   gridApi.value = params.api;
 }
@@ -299,9 +296,6 @@ const rowCount = computed(() => props.rowData.length);
         :rowData="rowData"
         :columnDefs="columnDefs"
         :defaultColDef="defaultColDef"
-        :pagination="true"
-        :paginationPageSize="paginationPageSize"
-        :paginationPageSizeSelector="paginationPageSizeSelector"
         :animateRows="true"
         :suppressCellFocus="true"
         rowSelection="single"
