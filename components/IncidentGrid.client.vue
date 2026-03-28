@@ -109,7 +109,7 @@ const columnDefs = ref([
     flex: 1,
   },
   {
-    headerName: "ODO",
+    headerName: "ODO (km)",
     field: "odometerKmAtFailure",
     valueFormatter: formatKm,
     filter: "agNumberColumnFilter",
@@ -119,11 +119,21 @@ const columnDefs = ref([
   {
     headerName: "Failure Date",
     valueGetter: (params: any) => {
-      const { failureYear, failureMonth } = params.data;
-      return (failureYear ?? 0) * 100 + (failureMonth ?? 0);
+      const { failureDate, failureYear, failureMonth } = params.data;
+      if (failureDate) {
+        return Date.parse(failureDate);
+      }
+
+      if (failureYear || failureMonth) {
+        return Date.UTC(failureYear ?? 0, (failureMonth ?? 1) - 1, 1);
+      }
+
+      return Number.NEGATIVE_INFINITY;
     },
     valueFormatter: formatFailureLabel,
     filter: "agNumberColumnFilter",
+    sort: "desc",
+    sortIndex: 0,
     minWidth: 110,
     flex: 1,
   },
