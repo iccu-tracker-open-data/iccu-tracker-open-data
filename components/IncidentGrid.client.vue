@@ -1,27 +1,31 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { AgGridVue } from "ag-grid-vue3";
-import { ModuleRegistry, AllCommunityModule, themeMaterial, colorSchemeDarkBlue } from "ag-grid-community";
+import {
+  ModuleRegistry,
+  AllCommunityModule,
+  themeMaterial,
+  colorSchemeDarkBlue,
+} from "ag-grid-community";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const gridTheme = themeMaterial
-  .withPart(colorSchemeDarkBlue)
-  .withParams({
-    backgroundColor: "#0f1117",
-    foregroundColor: "#e8eaf0",
-    headerTextColor: "#ffffff",
-    headerBackgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderColor: "rgba(255, 255, 255, 0.08)",
-    rowHoverColor: "rgba(255, 255, 255, 0.06)",
-    selectedRowBackgroundColor: "rgba(56, 189, 248, 0.08)",
-    accentColor: "#38bdf8",
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    fontSize: 14,
-    headerFontWeight: 600,
-    oddRowBackgroundColor: "rgba(255, 255, 255, 0.02)",
-    borderRadius: 0,
-  });
+const gridTheme = themeMaterial.withPart(colorSchemeDarkBlue).withParams({
+  backgroundColor: "#0f1117",
+  foregroundColor: "#e8eaf0",
+  headerTextColor: "#ffffff",
+  headerBackgroundColor: "rgba(255, 255, 255, 0.04)",
+  borderColor: "rgba(255, 255, 255, 0.08)",
+  rowHoverColor: "rgba(255, 255, 255, 0.06)",
+  selectedRowBackgroundColor: "rgba(56, 189, 248, 0.08)",
+  accentColor: "#38bdf8",
+  fontFamily:
+    "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  fontSize: 14,
+  headerFontWeight: 600,
+  oddRowBackgroundColor: "rgba(255, 255, 255, 0.02)",
+  borderRadius: 0,
+});
 
 type Incident = {
   model: string;
@@ -52,6 +56,17 @@ const emit = defineEmits<{
 }>();
 
 const gridApi = ref<any>(null);
+const selectedComment = ref<string | null>(null);
+const selectedCommentMeta = ref<{
+  model: string;
+  region: string;
+  incidentSequence: number;
+  buildYear: number | null;
+  buildMonth: number | null;
+  failureDate: string | null;
+  odometerKmAtFailure: number | null;
+  recall41d033Done: string;
+} | null>(null);
 
 function formatBuildLabel(params: any) {
   const { buildYear, buildMonth } = params.data;
@@ -81,6 +96,17 @@ function formatKm(params: any) {
   return value.toLocaleString();
 }
 
+function formatBuildInline(
+  buildYear: number | null,
+  buildMonth: number | null,
+) {
+  if (buildYear && buildMonth) {
+    return `${buildYear}-${String(buildMonth).padStart(2, "0")}`;
+  }
+  if (buildYear) return String(buildYear);
+  if (buildMonth) return `Month ${String(buildMonth).padStart(2, "0")}`;
+  return "Unknown";
+}
 
 const columnDefs = ref([
   {
@@ -159,6 +185,15 @@ const columnDefs = ref([
     flex: 2,
     sortable: false,
     valueFormatter: (params: any) => params.value || "—",
+    tooltipValueGetter: () => "Click to show full comment",
+    tooltipShowDelay: 0,
+    tooltipSwitchShowDelay: 0,
+    cellStyle: {
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      cursor: "pointer",
+    },
   },
 ]);
 
@@ -172,6 +207,29 @@ const paginationPageSizeSelector = ref([25, 50, 100]);
 
 function onGridReady(params: any) {
   gridApi.value = params.api;
+}
+
+function onCellClicked(params: any) {
+  if (params.colDef?.field !== "publicComment") return;
+  const comment = params.data?.publicComment?.trim();
+  if (!comment) return;
+
+  selectedComment.value = comment;
+  selectedCommentMeta.value = {
+    model: params.data.model,
+    region: params.data.region,
+    incidentSequence: params.data.incidentSequence,
+    buildYear: params.data.buildYear ?? null,
+    buildMonth: params.data.buildMonth ?? null,
+    failureDate: params.data.failureDate ?? null,
+    odometerKmAtFailure: params.data.odometerKmAtFailure ?? null,
+    recall41d033Done: params.data.recall41d033Done,
+  };
+}
+
+function closeCommentViewer() {
+  selectedComment.value = null;
+  selectedCommentMeta.value = null;
 }
 
 function exportCsv() {
@@ -203,7 +261,7 @@ function exportJson() {
   downloadBlob(
     "iccu-filtered-data.json",
     `${JSON.stringify(rows, null, 2)}\n`,
-    "application/json;charset=utf-8"
+    "application/json;charset=utf-8",
   );
 }
 
@@ -248,7 +306,66 @@ const rowCount = computed(() => props.rowData.length);
         :suppressCellFocus="true"
         rowSelection="single"
         @grid-ready="onGridReady"
+        @cell-clicked="onCellClicked"
       />
+    </div>
+
+    <div
+      v-if="selectedComment"
+      class="comment-viewer-backdrop"
+      @click.self="closeCommentViewer"
+    >
+      <section class="comment-viewer" role="dialog" aria-modal="true">
+        <header class="comment-viewer-header">
+          <div>
+            <p class="comment-viewer-kicker">Public comment</p>
+            <h3 class="comment-viewer-title">
+              {{ selectedCommentMeta?.model }} · #{{
+                selectedCommentMeta?.incidentSequence
+              }}
+            </h3>
+            <p class="comment-viewer-subtitle">
+              {{ selectedCommentMeta?.region }}
+            </p>
+          </div>
+          <button
+            class="ghost-button cta-sm comment-viewer-close"
+            type="button"
+            @click="closeCommentViewer"
+          >
+            Close
+          </button>
+        </header>
+        <div class="comment-viewer-meta">
+          <span class="comment-viewer-chip">
+            Built
+            {{
+              formatBuildInline(
+                selectedCommentMeta?.buildYear ?? null,
+                selectedCommentMeta?.buildMonth ?? null,
+              )
+            }}
+          </span>
+          <span
+            v-if="selectedCommentMeta?.failureDate"
+            class="comment-viewer-chip"
+          >
+            Failure {{ selectedCommentMeta.failureDate }}
+          </span>
+          <span
+            v-if="selectedCommentMeta?.odometerKmAtFailure != null"
+            class="comment-viewer-chip"
+          >
+            {{ selectedCommentMeta.odometerKmAtFailure.toLocaleString() }} km
+          </span>
+          <span class="comment-viewer-chip">
+            Recall 41D033 {{ selectedCommentMeta?.recall41d033Done }}
+          </span>
+        </div>
+        <div class="comment-viewer-body">
+          {{ selectedComment }}
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -265,9 +382,100 @@ const rowCount = computed(() => props.rowData.length);
   --ag-header-foreground-color: #ffffff;
 }
 
+.comment-viewer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(6, 8, 12, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.comment-viewer {
+  width: min(760px, 100%);
+  max-height: min(80vh, 760px);
+  padding: 18px;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  border-radius: 18px;
+  background: rgba(11, 15, 22, 0.98);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.comment-viewer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.comment-viewer-kicker {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.comment-viewer-title {
+  margin: 0;
+  color: var(--ink-heading);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.comment-viewer-subtitle {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.comment-viewer-body {
+  max-height: calc(80vh - 120px);
+  overflow: auto;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.comment-viewer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.comment-viewer-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.comment-viewer-close {
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .grid-wrapper {
     height: 480px;
+  }
+
+  .comment-viewer {
+    padding: 14px;
   }
 }
 
