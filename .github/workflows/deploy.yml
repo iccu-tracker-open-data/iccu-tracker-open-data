@@ -21,6 +21,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
+      GH_REPO_URL: ${{ secrets.GH_REPO_URL }}
+      GOOGLE_SHEET_URL: ${{ secrets.GOOGLE_SHEET_URL }}
+      GOOGLE_SHEET_GID: ${{ secrets.GOOGLE_SHEET_GID }}
       GOOGLE_SHEET_CSV_URL: ${{ secrets.GOOGLE_SHEET_CSV_URL }}
       GOOGLE_FORM_URL: ${{ secrets.GOOGLE_FORM_URL }}
       NUXT_APP_BASE_URL: /${{ github.event.repository.name }}/
