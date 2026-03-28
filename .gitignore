@@ -1,0 +1,8 @@
+node_modules
+.nuxt
+.output
+dist
+.env
+.DS_Store
+data/incidents.generated.json
+data/incidents.generated.json

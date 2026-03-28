@@ -1,0 +1,24 @@
+{
+  "name": "hy-iccu",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "data:refresh": "node scripts/fetch-sheet.mjs",
+    "dev": "nuxt dev",
+    "test": "node --test lib/*.test.mjs",
+    "prebuild": "node scripts/fetch-sheet.mjs",
+    "build": "nuxt build",
+    "pregenerate": "node scripts/fetch-sheet.mjs",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview"
+  },
+  "devDependencies": {
+    "nuxt": "^4.0.0"
+  },
+  "dependencies": {
+    "ag-grid-community": "^35.2.0",
+    "ag-grid-vue3": "^35.2.0",
+    "chart.js": "^4.5.1",
+    "vue-chartjs": "^5.3.3"
+  }
+}
