@@ -152,7 +152,6 @@ The public export must include these headers:
 The publish rule in code is simple:
 
 - publish rows where `public` is `1` or `true`
-- if the sheet is exporting raw Google Form responses and `public` is blank, fall back to `Permission to publish anonymized data = Yes`
 
 Anything else stays private.
 
